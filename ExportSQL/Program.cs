@@ -2,7 +2,6 @@
 using System.IO;
 using System.Linq;
 using System.Text;
-using CommandLineParser.Arguments;
 using CommandLineParser.Exceptions;
 using Microsoft.SqlServer.Management.Smo;
 
@@ -13,32 +12,14 @@ namespace ExportSQL
         private static void Main(string[] args)
         {
             var parser = new CommandLineParser.CommandLineParser();
-            parser.Arguments.Add(new SwitchArgument('s', "show", "Set whether show or not", true));
-            var argOutputFilePath = new ValueArgument<string>('o', "output", "Set output file path");
-            parser.Arguments.Add(argOutputFilePath);
-            var argServerConnection = new ValueArgument<string>('c', "connection", "Set server address,port");
-            parser.Arguments.Add(argServerConnection);
-            var argId = new ValueArgument<string>('i', "id", "Set Login ID");
-            parser.Arguments.Add(argId);
-            var argPw = new ValueArgument<string>('p', "pw", "Set Login PW");
-            parser.Arguments.Add(argPw);
-            var argDbName = new ValueArgument<string>('d', "dbName", "Set DbName");
-            parser.Arguments.Add(argDbName);
+            var commandParams = new CommandParams();
+            parser.ExtractArgumentAttributes(commandParams);
 
             try
             {
                 parser.ParseCommandLine(args);
                 // For Debugging
                 //parser.ShowParsedArguments();
-
-                foreach (var argument in parser.Arguments)
-                {
-                    if (argument.ShortName == 's')
-                        continue;
-
-                    if (!argument.Parsed)
-                        throw new CommandLineException( argument.LongName + " option was missing.");
-                }
             }
             catch (CommandLineException e)
             {
@@ -49,14 +30,8 @@ namespace ExportSQL
 
             try
             {
-                var outputFilePath = argOutputFilePath.Value;
-                var serverConnection = argServerConnection.Value;
-                var id = argId.Value;
-                var pw = argPw.Value;
-                var dbName = argDbName.Value;
-
-                DeleteFile(outputFilePath);
-                ExtractScript(serverConnection, id, pw, dbName, outputFilePath);
+                DeleteFile(commandParams.outputFilePath);
+                ExtractScript(commandParams);
             }
             catch (Exception e)
             {
@@ -69,19 +44,19 @@ namespace ExportSQL
             File.Delete(filePath);
         }
 
-        private static void ExtractScript(string serverConnection, string id, string pw, string dbName, string filePath)
+        private static void ExtractScript(CommandParams commandParams)
         {
-            var server = new Server(serverConnection);
+            var server = new Server(commandParams.connection);
             server.ConnectionContext.LoginSecure = false;
-            server.ConnectionContext.Login = id;
-            server.ConnectionContext.Password = pw;
+            server.ConnectionContext.Login = commandParams.id;
+            server.ConnectionContext.Password = commandParams.password;
 
             var scripter = new Scripter(server);
-            SetScriptOptions(filePath, scripter);
+            SetScriptOptions(commandParams.outputFilePath, scripter);
 
-            Database db = server.Databases[dbName];
+            var db = server.Databases[commandParams.dbName];
 
-            CreateScriptFileHeader(filePath, dbName);
+            CreateScriptFileHeader(commandParams.outputFilePath, commandParams.dbName);
             ExtractTableScript(scripter, db);
             ExtractStoredProcedureScript(scripter, db);
             ExtractViewsScript(scripter, db);
