@@ -23,5 +23,8 @@ namespace ExportSQL
 
         [ValueArgument(typeof(string), 'd', "dbName", Description = "Set database name")]
         public string dbName;
+
+        [SwitchArgument('u', "useDbContext", true, Description = "Set use database context[true, false]")]
+        public bool dbcontext;
     }
 }

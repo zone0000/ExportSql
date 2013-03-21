@@ -56,16 +56,19 @@ namespace ExportSQL
 
             var db = server.Databases[commandParams.dbName];
 
-            CreateScriptFileHeader(commandParams.outputFilePath, commandParams.dbName);
+            CreateScriptFileHeader(commandParams);
             ExtractTableScript(scripter, db);
             ExtractStoredProcedureScript(scripter, db);
             ExtractViewsScript(scripter, db);
         }
 
-        private static void CreateScriptFileHeader(string filePath, string instanceName)
+        private static void CreateScriptFileHeader(CommandParams commandParams)
         {
-            var createdFile = File.Create(filePath);
-            string fileHeader = "USE [" + instanceName + "]\r\n" + "GO\r\n";
+            if (!commandParams.dbcontext)
+                return;
+
+            var createdFile = File.Create(commandParams.outputFilePath);
+            string fileHeader = "USE [" + commandParams.dbName + "]\r\n" + "GO\r\n";
             byte[] bytes = GetEncoding().GetBytes(fileHeader);
             createdFile.Write(bytes, 0, bytes.Count());
             createdFile.Close();
